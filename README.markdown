@@ -12,6 +12,7 @@ The base.rb template installs Authlogic, RSpec and JQuery (and removes Prototype
 *Plugins:*
 
 * asset_packager
+* browserized_styles
 * hoptoad_notifier
 
 *Gems:*

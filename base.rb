@@ -53,6 +53,7 @@ end
 run "rm -f public/javascripts/*"
 run "curl -L http://jqueryjs.googlecode.com/files/jquery-1.2.6.min.js > public/javascripts/jquery.js"
 run "curl -L http://jqueryjs.googlecode.com/svn/trunk/plugins/form/jquery.form.js > public/javascripts/jquery.form.js"
+run "curl -L http://yui.yahooapis.com/2.7.0/build/reset-fonts-grids/reset-fonts-grids.css > public/stylesheets/reset-fonts-grids.css"
 
 generate('rspec')
 generate('cucumber')
@@ -195,3 +196,4 @@ puts "TO-DO checklist:"
 puts "* Create views for Authlogic - see http://github.com/binarylogic/authlogic_example/tree/master/app/views for examples"
 puts "* Test your Hoptoad installation with: rake hoptoad:test"
 puts "* Generate your asset_packager config with: rake asset:packager:create_yml"
+puts "* link to CSS from your application layout"

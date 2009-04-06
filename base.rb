@@ -19,6 +19,7 @@ git :commit => '-m "Initial commit."'
 
 plugin 'asset_packager', :git => 'script/plugin install git://github.com/sbecker/asset_packager.git'
 plugin 'hoptoad_notifier', :git => 'git://github.com/thoughtbot/hoptoad_notifier.git'
+plugin 'browserized_styles', :git => 'git://github.com/mbleigh/browserized-styles.git'
 
 hoptoad_key = ask("What is your Hoptoad API key?")
 
@@ -54,6 +55,9 @@ run "rm -f public/javascripts/*"
 run "curl -L http://jqueryjs.googlecode.com/files/jquery-1.2.6.min.js > public/javascripts/jquery.js"
 run "curl -L http://jqueryjs.googlecode.com/svn/trunk/plugins/form/jquery.form.js > public/javascripts/jquery.form.js"
 run "curl -L http://yui.yahooapis.com/2.7.0/build/reset-fonts-grids/reset-fonts-grids.css > public/stylesheets/reset-fonts-grids.css"
+run "touch public/javascripts/application.js"
+run "touch public/stylesheets/application.css"
+run "touch app/views/layouts/_header.html.erb app/views/layouts/_footer.html.erb"
 
 generate('rspec')
 generate('cucumber')
@@ -179,6 +183,47 @@ class ApplicationController < ActionController::Base
 end
 CODE
 
+file 'app/helpers/application_helper.rb', <<-CODE
+# Methods added to this helper will be available to all templates in the application.
+module ApplicationHelper
+  def clearfix
+    "<div class='clearfix'></div>"
+  end
+end
+CODE
+
+file 'app/views/layouts/application.html.erb', '
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+    "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+   <head>
+    <title></title>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <%= stylesheet_link_tag "reset-fonts-grids", "application" %>
+    <%= javascript_include_tag "jquery", "jquery-forms", "application" %>
+   </head>
+    <body class="<%=h "#{params[:controller]} #{params[:action]} #{params[:controller]}_#{params[:action]}" %>">
+      <div id="container">
+        <%= render :partial => "layouts/header" %>
+        <div id="content">
+          <% unless flash[:notice].blank? %>
+            <p class="flash_notice"><%= flash[:notice] %></p>
+          <% end %>
+          <% unless params[:message_string].blank? %>
+            <p class="flash_notice"><%= params[:message_string] %></p>
+          <% end %>
+          <%= yield %>
+        </div> <!-- end: #content -->
+        <%= clearfix %>
+        <%= render :partial => "layouts/footer" %>
+      </div> <!-- end: #container -->
+   </body>
+</html>
+'
+run 'rm app/views/layouts/users.html.erb'
+
 route 'map.resource :user_session'
 route 'map.root :controller => "user_sessions", :action => "new"'
 route 'map.resource :account, :controller => "users"'
@@ -196,4 +241,4 @@ puts "TO-DO checklist:"
 puts "* Create views for Authlogic - see http://github.com/binarylogic/authlogic_example/tree/master/app/views for examples"
 puts "* Test your Hoptoad installation with: rake hoptoad:test"
 puts "* Generate your asset_packager config with: rake asset:packager:create_yml"
-puts "* link to CSS from your application layout"
+puts "* Add a page title to the layout"

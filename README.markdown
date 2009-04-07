@@ -35,4 +35,4 @@ The base.rb template installs Authlogic, RSpec and JQuery (and removes Prototype
 
 * Yahoo's reset-fonts-grids.css
 
-It does not include the views for the Authlogic controllers, so you'll need to add those (or get a missing template error). The Hoptoad Notifier plugin is installed and you will need your Hoptoad API key handy.
+It does not include the password reset for Authlogic, so you'll need to add this. The Hoptoad Notifier plugin is installed and you will need your Hoptoad API key handy.

@@ -2,7 +2,6 @@ run "rm public/index.html"
 run "rm public/images/rails.png"
 run "rm README"
 run "cp config/database.yml config/database.yml.example"
-run "rm public/favicon.ico"
 run "rm public/robots.txt"
  
 file '.gitignore', <<-END
@@ -51,13 +50,12 @@ if yes?("Freeze Rails? (yes/no)")
   freeze!
 end
 
-run "rm -f public/javascripts/*"
-run "curl -L http://jqueryjs.googlecode.com/files/jquery-1.2.6.min.js > public/javascripts/jquery.js"
+run "curl -L http://jqueryjs.googlecode.com/files/jquery-1.3.2.min.js > public/javascripts/jquery.js"
 run "curl -L http://jqueryjs.googlecode.com/svn/trunk/plugins/form/jquery.form.js > public/javascripts/jquery.form.js"
-run "curl -L http://yui.yahooapis.com/2.7.0/build/reset-fonts-grids/reset-fonts-grids.css > public/stylesheets/reset-fonts-grids.css"
+run "curl -L http://yui.yahooapis.com/2.7.0/build/reset/reset-min.css > public/stylesheets/reset-min.css"
+run "curl -L http://yui.yahooapis.com/2.7.0/build/fonts/fonts-min.css > public/stylesheets/fonts-min.css"
 run "touch public/javascripts/application.js"
 run "touch public/stylesheets/application.css"
-run "touch app/views/layouts/_header.html.erb app/views/layouts/_footer.html.erb"
 
 generate('rspec')
 generate('cucumber')
@@ -192,37 +190,172 @@ module ApplicationHelper
 end
 CODE
 
-file 'app/views/layouts/application.html.erb', '
+site_title = ask("What is the title of your website?")
+body_tag = '<body class="<%=h "#{params[:controller]} #{params[:action]} #{params[:controller]}_#{params[:action]}" %>">'
+
+file 'app/views/layouts/application.html.erb', <<-CODE
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
     "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
-   <head>
-    <title></title>
+  <head>
+    <title>#{site_title}</title>
     <meta http-equiv="content-type" content="text/html; charset=utf-8" />
     <link rel="shortcut icon" href="/favicon.ico" />
-    <%= stylesheet_link_tag "reset-fonts-grids", "application" %>
-    <%= javascript_include_tag "jquery", "jquery-forms", "application" %>
-   </head>
-    <body class="<%=h "#{params[:controller]} #{params[:action]} #{params[:controller]}_#{params[:action]}" %>">
-      <div id="container">
-        <%= render :partial => "layouts/header" %>
-        <div id="content">
-          <% unless flash[:notice].blank? %>
-            <p class="flash_notice"><%= flash[:notice] %></p>
-          <% end %>
-          <% unless params[:message_string].blank? %>
-            <p class="flash_notice"><%= params[:message_string] %></p>
-          <% end %>
-          <%= yield %>
-        </div> <!-- end: #content -->
-        <%= clearfix %>
-        <%= render :partial => "layouts/footer" %>
-      </div> <!-- end: #container -->
-   </body>
+    <%= stylesheet_link_tag "reset-min", "fonts-min", "application" %>
+    <%= javascript_include_tag "prototype", "jquery" %>
+    <script type="text/javascript">jQuery.noConflict();</script>
+    <%= javascript_include_tag "jquery-forms", "application" %>
+  </head>
+  #{body_tag}
+    <div id="container">
+      <%= render :partial => "layouts/header" %>
+      <div id="content">
+        <% unless flash[:notice].blank? %>
+          <p class="flash_notice"><%= flash[:notice] %></p>
+        <% end %>
+        <% unless params[:message_string].blank? %>
+          <p class="flash_notice"><%= params[:message_string] %></p>
+        <% end %>
+        <%= yield %>
+      </div> <!-- end: #content -->
+      <%= clearfix %>
+      <%= render :partial => "layouts/footer" %>
+    </div> <!-- end: #container -->
+  </body>
 </html>
-'
+CODE
+
+file 'app/views/layouts/_header.html.erb', <<-CODE
+<% if !current_user %>
+  <%= link_to "Register", new_account_path %> |
+  <%= link_to "Log In", new_user_session_path %>
+<% else %>
+  <%= link_to "My Account", account_path %> |
+  <%= link_to "Log Out", user_session_path, :method => :delete, :confirm => "Are you sure you want to logout?" %>
+<% end %>
+CODE
+
+run 'touch app/views/layouts/_footer.html.erb'
 run 'rm app/views/layouts/users.html.erb'
+
+file 'app/views/password_resets/new.html.erb', <<-CODE
+<h1>Forgot Password</h1>
+ 
+Fill out the form below and instructions to reset your password will be emailed to you:<br />
+<br />
+ 
+<% form_tag password_resets_path do %>
+  <label>Email:</label><br />
+  <%= text_field_tag "email" %><br />
+  <br />
+  <%= submit_tag "Reset my password" %>
+<% end %>
+CODE
+
+file 'app/views/password_resets/edit.html.erb', <<-CODE
+<h1>Change My Password</h1>
+ 
+<% form_for @user, :url => password_reset_path, :method => :put do |f| %>
+  <%= f.error_messages %>
+  <%= f.label :password %><br />
+  <%= f.password_field :password %><br />
+  <br />
+  <%= f.label :password_confirmation %><br />
+  <%= f.password_field :password_confirmation %><br />
+  <br />
+  <%= f.submit "Update my password and log me in" %>
+<% end %>
+CODE
+
+file 'app/views/user_sessions/new.html.erb', <<-CODE
+<h1>Login</h1>
+ 
+<% form_for @user_session, :url => user_session_path do |f| %>
+  <%= f.error_messages %>
+  <%= f.label :login %><br />
+  <%= f.text_field :login %><br />
+  <br />
+  <%= f.label :password %><br />
+  <%= f.password_field :password %><br />
+  <br />
+  <%= f.check_box :remember_me %><%= f.label :remember_me %><br />
+  <br />
+  <%= f.submit "Login" %>
+<% end %>
+CODE
+
+file 'app/views/users/_form.html.erb', <<-CODE
+<%= form.label :login %><br />
+<%= form.text_field :login %><br />
+<br />
+<%= form.label :password, form.object.new_record? ? nil : "Change password" %><br />
+<%= form.password_field :password %><br />
+<br />
+<%= form.label :password_confirmation %><br />
+<%= form.password_field :password_confirmation %><br />
+CODE
+
+file 'app/views/users/edit.html.erb', <<-CODE
+<h1>Edit My Account</h1>
+ 
+<% form_for @user, :url => account_path do |f| %>
+  <%= f.error_messages %>
+  <%= render :partial => "form", :object => f %>
+  <%= f.submit "Update" %>
+<% end %>
+ 
+<br /><%= link_to "My Profile", account_path %>
+CODE
+
+file 'app/views/users/new.html.erb', <<-CODE
+<h1>Register</h1>
+ 
+<% form_for @user, :url => account_path do |f| %>
+  <%= f.error_messages %>
+  <%= render :partial => "form", :object => f %>
+  <%= f.submit "Register" %>
+<% end %>
+CODE
+
+file 'app/views/users/show.html.erb', <<-CODE
+<p>
+  <b>Login:</b>
+  <%=h @user.login %>
+</p>
+ 
+<p>
+  <b>Login count:</b>
+  <%=h @user.login_count %>
+</p>
+ 
+<p>
+  <b>Last request at:</b>
+  <%=h @user.last_request_at %>
+</p>
+ 
+<p>
+  <b>Last login at:</b>
+  <%=h @user.last_login_at %>
+</p>
+ 
+<p>
+  <b>Current login at:</b>
+  <%=h @user.current_login_at %>
+</p>
+ 
+<p>
+  <b>Last login ip:</b>
+  <%=h @user.last_login_ip %>
+</p>
+ 
+<p>
+  <b>Current login ip:</b>
+  <%=h @user.current_login_ip %>
+</p>
+ 
+<%= link_to 'Edit', edit_account_path %>
+CODE
 
 route 'map.resource :user_session'
 route 'map.root :controller => "user_sessions", :action => "new"'
@@ -235,10 +368,12 @@ git :commit => '-m "Adding templates, plugins and gems"'
 if yes?("Create and migrate databases now? (yes/no)")
   rake("db:create:all")
   rake("db:migrate")
+  git :add => "."
+  git :commit => '-m "First migration adding users"'
 end
 
 puts "TO-DO checklist:"
-puts "* Create views for Authlogic - see http://github.com/binarylogic/authlogic_example/tree/master/app/views for examples"
 puts "* Test your Hoptoad installation with: rake hoptoad:test"
 puts "* Generate your asset_packager config with: rake asset:packager:create_yml"
-puts "* Add a page title to the layout"
+puts "* add password resets"
+puts "* import this repo into github or Unfuddle"

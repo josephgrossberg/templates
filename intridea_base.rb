@@ -52,9 +52,14 @@ end
 
 run "curl -L http://jqueryjs.googlecode.com/files/jquery-1.3.2.min.js > public/javascripts/jquery.js"
 run "curl -L http://jqueryjs.googlecode.com/svn/trunk/plugins/form/jquery.form.js > public/javascripts/jquery.form.js"
+file 'public/javascripts/application.js', <<-CODE
+    jQuery.ajaxSetup({ 
+        'beforeSend': function(xhr) {xhr.setRequestHeader("Accept", "text/javascript")} 
+    });
+CODE
+
 run "curl -L http://yui.yahooapis.com/2.7.0/build/reset/reset-min.css > public/stylesheets/reset-min.css"
 run "curl -L http://yui.yahooapis.com/2.7.0/build/fonts/fonts-min.css > public/stylesheets/fonts-min.css"
-run "touch public/javascripts/application.js"
 run "touch public/stylesheets/application.css"
 
 generate('rspec')

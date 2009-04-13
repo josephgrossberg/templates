@@ -5,9 +5,9 @@ I'm using this repository to store my Rails 2.3+ templates.
 
 Base
 --------
-To use: `rails -m /path/to/base.rb new_project_name`
+To use: `rails -m /path/to/intridea_base.rb new_project_name`
 
-The base.rb template installs Authlogic, RSpec and JQuery (and removes Prototype), in addition to a few other essentials. 
+The intridea_base.rb template installs Authlogic, RSpec and JQuery (and removes Prototype), in addition to a few other essentials. 
 
 *Plugins:*
 

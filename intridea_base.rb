@@ -1,4 +1,10 @@
 #################################
+# INITIAL QUESTIONS
+#################################
+site_title = ask("What is the title of your website?")
+site_url = ask("What is the URL of your website? (e.g. www.example.com)")
+
+#################################
 # CLEANING UP FILES
 #################################
 run "rm public/index.html"
@@ -85,12 +91,37 @@ generate('cucumber')
 # AUTHLOGIC
 #################################
 generate('session', 'user_session')
-generate('rspec_scaffold', 'user login:string crypted_password:string password_salt:string persistence_token:string login_count:integer last_request_at:datetime last_login_at:datetime current_login_at:datetime last_login_ip:string current_login_ip:string')
+generate('rspec_scaffold', 'user login:string crypted_password:string password_salt:string persistence_token:string single_access_token:string perishable_token:string login_count:integer last_request_at:datetime last_login_at:datetime current_login_at:datetime last_login_ip:string current_login_ip:string')
 
 file 'app/models/user.rb', <<-CODE
 class User < ActiveRecord::Base
   acts_as_authentic
+
+  def deliver_password_reset_instructions!(url)
+    Notifier.deliver_password_reset_instructions(self, url)
+  end
 end
+CODE
+
+file 'app/models/notifier.rb', <<-CODE
+class Notifier < ActionMailer::Base
+  default_url_options[:host] = "#{site_url}"
+
+  def password_reset_instructions(user, url)
+    subject       "Password Reset Instructions for #{site_title}"
+    recipients    user.login
+    sent_on       Time.now                     
+    body          :edit_password_reset_url => edit_password_reset_url(user.perishable_token) 
+  end         
+end
+CODE
+
+file 'app/views/notifier/password_reset_instructions.html.erb', <<-CODE
+A request to reset your password has been made. If you did not make this request, simply ignore this email. If you did make this request just click the link below:
+ 
+<%= @edit_password_reset_url %>
+ 
+If the above URL does not work try copying and pasting it into your browser. If you continue to have problem please feel free to contact us.
 CODE
 
 file 'app/controllers/user_sessions_controller.rb', <<-CODE
@@ -215,7 +246,6 @@ module ApplicationHelper
 end
 CODE
 
-site_title = ask("What is the title of your website?")
 body_tag = '<body class="<%=h "#{params[:controller]} #{params[:action]} #{params[:controller]}_#{params[:action]}" %>">'
 
 file 'app/views/layouts/application.html.erb', <<-CODE
@@ -230,7 +260,7 @@ file 'app/views/layouts/application.html.erb', <<-CODE
     <%= stylesheet_link_tag "reset-min", "fonts-min", "application" %>
     <%= javascript_include_tag "prototype", "jquery" %>
     <script type="text/javascript">jQuery.noConflict();</script>
-    <%= javascript_include_tag "jquery-forms", "application" %>
+    <%= javascript_include_tag "jquery-form", "application" %>
   </head>
   #{body_tag}
     <div id="container">
@@ -263,6 +293,59 @@ CODE
 
 run 'touch app/views/layouts/_footer.html.erb'
 run 'rm app/views/layouts/users.html.erb'
+
+file 'app/controllers/password_resets_controller.rb', <<-CODE
+class PasswordResetsController < ApplicationController
+  before_filter :load_user_using_perishable_token, :only => [:edit, :update]
+  before_filter :require_no_user
+  
+  def new
+    render
+  end
+
+  def create
+    @user = User.find_by_login(params[:email])
+    if @user
+      @user.deliver_password_reset_instructions! request.env['HTTP_HOST']
+      flash[:notice] = "Instructions to reset your password have been emailed to you. " +
+        "Please check your email."
+      redirect_to home_url
+    else
+      flash[:notice] = "No user was found with that email address"
+      render :action => :new
+    end
+  end
+
+  def edit
+    render
+  end
+  
+  def update
+    @user.password = params[:user][:password]
+    @user.password_confirmation = params[:user][:password_confirmation]
+    if @user.save
+      flash[:notice] = "Password successfully updated"
+      redirect_to home_url
+    else
+      render :action => :edit
+    end
+  end
+  
+  private
+  def load_user_using_perishable_token
+    @user = User.find_using_perishable_token(params[:id])
+    unless @user
+      flash[:notice] = "We're sorry, but we could not locate your account. " +
+                       "If you are having issues, try copying and pasting " +
+                       "the URL from your email into your browser or " +
+                       "starting the <a href=\"" + new_password_reset_path + 
+                       "\">reset password</a> process again."
+      redirect_to home_url
+    end
+  end
+
+end
+CODE
 
 file 'app/views/password_resets/new.html.erb', <<-CODE
 <h1>Forgot Password</h1>
@@ -308,6 +391,8 @@ file 'app/views/user_sessions/new.html.erb', <<-CODE
   <br />
   <%= f.submit "Login" %>
 <% end %>
+
+<p><%= link_to "Forgot password?", new_password_reset_path %></p>
 CODE
 
 file 'app/views/users/_form.html.erb', <<-CODE
@@ -386,9 +471,11 @@ CODE
 # ROUTES
 #################################
 route 'map.resource :user_session'
-route 'map.root :controller => "user_sessions", :action => "new"'
 route 'map.resource :account, :controller => "users"'
 route 'map.resources :users'
+route 'map.resources :password_resets'
+route 'map.home \'/\', :controller => "user_sessions", :action => "new"'
+route 'map.root :controller => "user_sessions", :action => "new"'
 
 #################################
 # GIT CHECK-IN
@@ -412,5 +499,4 @@ end
 puts "TO-DO checklist:"
 puts "* Test your Hoptoad installation with: rake hoptoad:test"
 puts "* Generate your asset_packager config with: rake asset:packager:create_yml"
-puts "* add password resets"
 puts "* import this repo into github or Unfuddle"

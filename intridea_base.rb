@@ -49,6 +49,7 @@ gem 'rspec', :lib => false
 gem 'rspec-rails', :lib => false
 gem 'thoughtbot-factory_girl', :lib => 'factory_girl', :source => 'http://gems.github.com'
 gem 'carlosbrando-remarkable', :lib => 'remarkable', :source => 'http://gems.github.com'
+gem 'relevance-rcov', :lib => 'rcov', :source => 'http://gems.github.com'
 gem 'webrat'
 gem 'mislav-will_paginate', :version => '~> 2.2.3',
   :lib => 'will_paginate', :source => 'http://gems.github.com'
